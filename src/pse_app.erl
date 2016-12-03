@@ -8,11 +8,14 @@
 -behaviour(application).
 
 %% Application callbacks
--export([start/2, stop/1]).
+-export([start/0, start/2, stop/1]).
 
 %%====================================================================
 %% API
 %%====================================================================
+start() ->
+	io:format("Hi there.. pse starting ~n"),
+	pse_sup:start_link().
 
 start(_StartType, _StartArgs) ->
     pse_sup:start_link().
