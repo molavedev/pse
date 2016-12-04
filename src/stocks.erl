@@ -5,6 +5,7 @@
 momentum() ->
 	%% it's required to call inets:start() before we can make http requests
 	inets:start(),
+	ssl:start(),
 	file_utils:start(get_cache_dir(), []),
  	io:format("downloading phisix data from 'http://phisix-api.appspot.com/stocks.json' ~n"),
  	Stocks = download(),
@@ -18,10 +19,24 @@ momentum() ->
  	io:format("display / save results~n").
 
 get_bloomberg_stock(Stock) ->
-	%%Url = "http://www.bloomberg.com/quote/" ++ Symbol ++ ":PM",
-	% io:format("bloomberg for ~p~n", [Stock]),
 	[{_, Name}, {_, [_, {_, Price}]}, _, {_, Volume}, {_, Symbol}] = Stock,
-	{Name, Symbol, Price, Volume}.
+	Url = "http://www.bloomberg.com/quote/" ++ binary_to_list(Symbol) ++ ":PM",
+	io:format("Url: ~p~n", [Url]),
+	CacheFile = binary_to_list(Symbol) ++ ".txt",
+	case file_utils:file_exists(CacheFile) of
+		false -> 
+			io:format("~p DOES NOT exist~n", [CacheFile]),
+			Response = httpc:request(get, {Url, []}, [], []),
+		 	Body = response_body(Response),
+		 	file_utils:dump(CacheFile, Body),
+		 	timer:sleep(10000);
+		true ->
+			io:format("~p exists~n", [CacheFile]),
+			ok 	
+	end,
+	OneYearReturn = file_utils:get_one_year_return(CacheFile),
+	io:format("one year return: ~p~n", [OneYearReturn]),
+	{Name, Symbol, Price, Volume, OneYearReturn}.
 
 get_bloomberg_data(Stocks) ->
 	io:format("getting bloomberg....~n"),
@@ -30,7 +45,7 @@ get_bloomberg_data(Stocks) ->
 greater_than_limit(Stock) ->
 	[_Name, Price, _Change, {_, Volume}, _Symbol] = Stock,
 	{_, [_currency, {_, Amount}]} = Price,
-	greater_than_limit(Amount*Volume, 300000000).
+	greater_than_limit(Amount*Volume, 1000000).
 
 greater_than_limit(X,Limit) when X >= Limit -> true;
 greater_than_limit(_, _) -> false.
