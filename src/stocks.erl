@@ -10,15 +10,22 @@ momentum() ->
  	Stocks = download(),
  	io:format("filtering stocks with 1M daily value. ~n"),
     FilteredStocks = filterStocks(Stocks),
-    io:format("Filtered Stocks: ~p~n",[FilteredStocks]),
-    getBloombergData(FilteredStocks),
+    BloombergStocks = getBloombergData(FilteredStocks),
+    io:format("bloomberg Stocks: ~p~n",[BloombergStocks]),
  	io:format("for each stock, get quotes and 1-year returns from bloomberg~n"),
  	io:format("calculate 1-year return less last-month's returns~n"),
  	io:format("sort stocks by 1-year return less last-months return~n"),
  	io:format("display / save results~n").
 
+getBloombergForStock(Stock) ->
+	%%Url = "http://www.bloomberg.com/quote/" ++ Symbol ++ ":PM",
+	io:format("bloomberg for ~p~n", [Stock]),
+	[Name, Price, _Change, {_, Volume}, Symbol] = Stock,
+	{Name, Symbol, Price, Volume}.
+
 getBloombergData(Stocks) ->
-	io:format("getting bloomberg...."). 	
+	io:format("getting bloomberg...."),
+	lists:map(fun(Stock) -> getBloombergForStock(Stock) end, Stocks).
 
 greaterThanLimit(Stock) ->
 	[_Name, Price, _Change, {_, Volume}, _Symbol] = Stock,

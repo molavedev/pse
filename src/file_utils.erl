@@ -9,13 +9,28 @@ start(Dir, _Opt) ->
   gen_server:start({local, ?MODULE}, ?MODULE, Dir, []).
 
 save_terms({File, List}) ->
-  gen_server:call(?MODULE, {save_terms, File, List}).  
+  Dir = get_dir(),
+  writeListToFile(Dir, File, List).  
+
+writeListToFile(Dir, File, L) ->
+	FilePath = Dir ++ File,
+	{ok, S} = file:open(FilePath, write),
+	lists:foreach(fun(X) -> io:format(S, "~p.~n",[X]) end, L), 
+	file:close(S).  
 
 file_exists(File) ->
-  gen_server:call(?MODULE, {file_exists, File}).  
+  Dir = get_dir(),	
+  FilePath = Dir ++ File, 
+  filelib:is_regular(FilePath).  
 
 read(File) ->
-	gen_server:call(?MODULE, {read, File}).  	  
+ 	Dir = get_dir(),
+    FilePath = Dir ++ File, 
+	{ok, Stocks} = file:consult(FilePath),
+	Stocks.  	  
+
+get_dir() ->
+	gen_server:call(?MODULE, {get_dir}).		
 
 terminate(shutdown, _State) ->
     ok.
@@ -25,25 +40,8 @@ init(Dir) ->
   Result = filelib:ensure_dir(Dir), 
   {ok, Dir}.
 
-writeListToFile(Dir, File, L) ->
-	FilePath = Dir ++ File,
-	{ok, S} = file:open(FilePath, write),
-	lists:foreach(fun(X) -> io:format(S, "~p.~n",[X]) end, L), 
-	file:close(S).
-
-handle_call({file_exists, File}, _From, Dir) ->
-	FilePath = Dir ++ File, 
-	Reply = filelib:is_regular(FilePath),
-	{reply, Reply, Dir};
-
-handle_call({read, File}, _From, Dir) ->
-	FilePath = Dir ++ File, 
-	{ok, Stocks} = file:consult(FilePath),
-	{reply, Stocks, Dir};
-
-handle_call({save_terms, File, List}, _From, Dir) ->
-  writeListToFile(Dir, File, List),
-  {reply, ok, Dir}.
+handle_call({get_dir}, _From, Dir) ->
+	{reply, Dir, Dir}.
 
 %% you can ignore the rest - they are needed to be present
 handle_cast(_Msg, State) ->
