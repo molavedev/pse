@@ -5,60 +5,60 @@
 momentum() ->
 	%% it's required to call inets:start() before we can make http requests
 	inets:start(),
-	file_utils:start(getCacheDir(), []),
+	file_utils:start(get_cache_dir(), []),
  	io:format("downloading phisix data from 'http://phisix-api.appspot.com/stocks.json' ~n"),
  	Stocks = download(),
  	io:format("filtering stocks with 1M daily value. ~n"),
-    FilteredStocks = filterStocks(Stocks),
-    BloombergStocks = getBloombergData(FilteredStocks),
+    FilteredStocks = filter_stocks(Stocks),
+    BloombergStocks = get_bloomberg_data(FilteredStocks),
     io:format("bloomberg Stocks: ~p~n",[BloombergStocks]),
  	io:format("for each stock, get quotes and 1-year returns from bloomberg~n"),
  	io:format("calculate 1-year return less last-month's returns~n"),
  	io:format("sort stocks by 1-year return less last-months return~n"),
  	io:format("display / save results~n").
 
-getBloombergForStock(Stock) ->
+get_bloomberg_stock(Stock) ->
 	%%Url = "http://www.bloomberg.com/quote/" ++ Symbol ++ ":PM",
-	io:format("bloomberg for ~p~n", [Stock]),
-	[Name, Price, _Change, {_, Volume}, Symbol] = Stock,
+	% io:format("bloomberg for ~p~n", [Stock]),
+	[{_, Name}, {_, [_, {_, Price}]}, _, {_, Volume}, {_, Symbol}] = Stock,
 	{Name, Symbol, Price, Volume}.
 
-getBloombergData(Stocks) ->
-	io:format("getting bloomberg...."),
-	lists:map(fun(Stock) -> getBloombergForStock(Stock) end, Stocks).
+get_bloomberg_data(Stocks) ->
+	io:format("getting bloomberg....~n"),
+	lists:map(fun(Stock) -> get_bloomberg_stock(Stock) end, Stocks).
 
-greaterThanLimit(Stock) ->
+greater_than_limit(Stock) ->
 	[_Name, Price, _Change, {_, Volume}, _Symbol] = Stock,
 	{_, [_currency, {_, Amount}]} = Price,
-	greaterThanLimit(Amount*Volume, 300000000).
+	greater_than_limit(Amount*Volume, 300000000).
 
-greaterThanLimit(X,Limit) when X >= Limit -> true;
-greaterThanLimit(_, _) -> false.
+greater_than_limit(X,Limit) when X >= Limit -> true;
+greater_than_limit(_, _) -> false.
 	
 
-filterStocks(Stocks) ->
-	[Stock || Stock <- Stocks, greaterThanLimit(Stock)].
+filter_stocks(Stocks) ->
+	[Stock || Stock <- Stocks, greater_than_limit(Stock)].
 
 %% dir MUST HAVE a slash "/" at the end for filelib:ensure_dir to work
-getCacheDir() ->
+get_cache_dir() ->
 	{{Year, Month, Day}, _Time} = erlang:localtime(),
 	io:format("year: ~p; month: ~p; day: ~p~n", [Year, Month, Day]),
 	"pse_" ++ integer_to_list(Year) ++ "_" ++ 
 	     integer_to_list(Month) ++ "_" ++ 
 	     integer_to_list(Day) ++ "/".
 
-readStocksFromFile(CacheFile) ->
+read_stocks_from_file(CacheFile) ->
 	file_utils:read(CacheFile).
 
-downloadStocks(CacheFile) ->
+download_stocks(CacheFile) ->
  	Url = "http://phisix-api.appspot.com/stocks.json",
  	Response = httpc:request(get, {Url, []}, [], []),
 	Body = response_body(Response),
-	Stocks = stocksFromHtmlBody(Body),
+	Stocks = stocks_from_html_body(Body),
 	file_utils:save_terms({"stocks.txt", Stocks}),
 	Stocks.	
 
-stocksFromHtmlBody(Body) ->
+stocks_from_html_body(Body) ->
 	[{_Stock, Stocks}, _AsOf] = jsx:decode(list_to_binary(Body)),
 	Stocks.	
 
@@ -68,10 +68,10 @@ download() ->
 	case file_utils:file_exists(CacheFile) of
 		true ->
 			io:format("cache file exists~n"), 
-			readStocksFromFile(CacheFile);
+			read_stocks_from_file(CacheFile);
 		false -> 
 			io:format("cache file DOES NOT exists~n"),
-			downloadStocks(CacheFile)
+			download_stocks(CacheFile)
 	end.
 
 response_body({ok, { _, _, Body}}) -> Body.
