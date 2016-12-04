@@ -15,7 +15,9 @@
 %%====================================================================
 start() ->
 	io:format("Hi there.. pse starting ~n"),
-	pse_sup:start_link().
+	stocks:momentum(),
+	init:stop().
+	%% pse_sup:start_link().
 
 start(_StartType, _StartArgs) ->
     pse_sup:start_link().
